@@ -1,10 +1,19 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# File              : ncon.py
+# Author            : Xinliang(Bruce) Lyu <lyu@issp.u-tokyo.ac.jp>
+# Date              : 01.04.2021
+# Last Modified Date: 01.04.2021
+# Last Modified By  : Xinliang(Bruce) Lyu <lyu@issp.u-tokyo.ac.jp>
 """A module for the function ncon, which does contractions of several tensors.
 """
 import numpy as np
+import jax
+import jax.numpy as jnp
 from collections.abc import Iterable
 
 
-def ncon(L, v, order=None, forder=None, check_indices=True):
+def ncon(L, v, order=None, forder=None, check_indices=True, isjax=False):
     """L = [A1, A2, ..., Ap] list of tensors.
 
     v = (v1, v2, ..., vp) tuple of lists of indices e.g. v1 = [3, 4, -1] labels
@@ -17,6 +26,8 @@ def ncon(L, v, order=None, forder=None, check_indices=True):
 
     forder, if present, contains the final ordering of the uncontracted indices
     - if not, [-1, -2, ..i] by default.
+
+    isjax, if True, we use jax.numpy instead of numpy
 
     There is some leeway in the way the inputs are given. For example,
     instead of giving a list of tensors as the first argument one can
@@ -66,10 +77,11 @@ def ncon(L, v, order=None, forder=None, check_indices=True):
         pos1, pos2 = get_pos(v, tcon, icon)
         if tracing:
             # Trace on a tensor
-            new_A = trace(L[tcon[0]], axis1=pos1[0], axis2=pos1[1])
+            new_A = trace(L[tcon[0]], axis1=pos1[0],
+                          axis2=pos1[1], isjax=isjax)
         else:
             # Contraction of 2 tensors
-            new_A = con(L[tcon[0]], L[tcon[1]], (pos1, pos2))
+            new_A = con(L[tcon[0]], L[tcon[1]], (pos1, pos2), isjax=isjax)
         L.append(new_A)
         v.append(find_newv(v, tcon, icon))  # Add the v for the new tensor
         for i in sorted(tcon, reverse=True):
@@ -342,12 +354,24 @@ def do_check_indices(L, v, order, forder):
 ####################################################################
 
 
-def con(A, B, inds):
-    if type(A) == type(B) == np.ndarray:
-        return np.tensordot(A, B, inds)
+def con(A, B, inds, isjax=False):
+    if (type(A) == type(B) == np.ndarray):
+        if not isjax:
+            return np.tensordot(A, B, inds)
+        else:
+            return jnp.tensordot(A, B, inds)
+    elif ((type(A).__module__.split(".")[0] == "jax") or
+          (type(B).__module__.split(".")[0] == "jax")):
+        return jnp.tensordot(A, B, inds)
     else:
+        # TODO
+        # Later it should be changed so that the JAX can be used
+        # for abeliantensors
         return A.dot(B, inds)
 
 
-def trace(A, axis1=0, axis2=1):
-    return A.trace(axis1=axis1, axis2=axis2)
+def trace(A, axis1=0, axis2=1, isjax=False):
+    if not isjax:
+        return A.trace(axis1=axis1, axis2=axis2)
+    else:
+        return jnp.trace(A, axis1=axis1, axis2=axis2)
