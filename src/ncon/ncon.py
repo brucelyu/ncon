@@ -3,7 +3,7 @@
 # File              : ncon.py
 # Author            : Xinliang(Bruce) Lyu <lyu@issp.u-tokyo.ac.jp>
 # Date              : 01.04.2021
-# Last Modified Date: 01.04.2021
+# Last Modified Date: 02.04.2021
 # Last Modified By  : Xinliang(Bruce) Lyu <lyu@issp.u-tokyo.ac.jp>
 """A module for the function ncon, which does contractions of several tensors.
 """
@@ -367,7 +367,12 @@ def con(A, B, inds, isjax=False):
         # TODO
         # Later it should be changed so that the JAX can be used
         # for abeliantensors
-        return A.dot(B, inds)
+        if not isjax:
+            return A.dot(B, inds)
+        else:
+            ErrorMessage = "JAX for abelieantensors not implemented yet!"
+            raise NotImplementedError(ErrorMessage)
+            return 0
 
 
 def trace(A, axis1=0, axis2=1, isjax=False):
